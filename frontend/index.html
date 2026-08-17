@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Interview Agent - Technical Assessment Platform</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <div class="container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="logo-group">
+        <span class="logo-icon">⚡</span>
+        <div>
+          <h1 class="app-title">AI Interview Agent</h1>
+          <p style="font-size: 0.85rem; color: var(--text-secondary);">Multi-Agent Technical Evaluator</p>
+        </div>
+      </div>
+      <div class="status-indicator">
+        <span class="dot"></span>
+        <span id="apiStatus">Connected to Backend (http://localhost:8000)</span>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="tab-btn active" onclick="switchTab('setup')">📄 1. Setup Candidate & Job</button>
+      <button class="tab-btn" id="interviewTabBtn" onclick="switchTab('room')" disabled>🎙️ 2. Live Interview Room</button>
+      <button class="tab-btn" id="reportTabBtn" onclick="switchTab('report')" disabled>📊 3. Recruiter Report</button>
+    </nav>
+
+    <!-- Tab 1: Setup Panel -->
+    <section id="setupPanel" class="panel active">
+      <h2 style="margin-bottom: 20px; font-weight: 600;">Candidate & Job Description Onboarding</h2>
+      
+      <div style="margin-bottom: 20px;">
+        <button class="btn-secondary" onclick="loadMockData()">⚡ Load Pre-filled Mock Profile (Jane Doe - Backend Eng)</button>
+      </div>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Candidate Name & Email</label>
+          <input type="text" id="candName" placeholder="e.g. Jane Doe">
+          <input type="email" id="candEmail" placeholder="e.g. jane@example.com" style="margin-top: 8px;">
+          <label style="margin-top: 12px;">Candidate Resume Content</label>
+          <textarea id="candResume" placeholder="Paste candidate resume skills, experience, projects..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Job Title</label>
+          <input type="text" id="jobTitle" placeholder="e.g. Senior Backend Engineer">
+          <label style="margin-top: 12px;">Job Description (JD)</label>
+          <textarea id="jobDesc" placeholder="Paste target job requirements and key technical skills..."></textarea>
+        </div>
+      </div>
+
+      <div style="text-align: right;">
+        <button class="btn-primary" onclick="initInterviewSession()">🚀 Start Interview Session &rarr;</button>
+      </div>
+    </section>
+
+    <!-- Tab 2: Interview Room -->
+    <section id="roomPanel" class="panel">
+      <div class="room-header">
+        <div>
+          <h2 id="sessionCandidateName" style="font-weight: 600;">Interview in Progress</h2>
+          <p id="sessionJobTitle" style="font-size: 0.9rem; color: var(--text-secondary);"></p>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <span style="font-size: 0.9rem; color: var(--text-secondary);">Voice TTS:</span>
+          <input type="checkbox" id="ttsToggle" checked style="width: 20px; height: 20px; cursor: pointer;">
+        </div>
+      </div>
+
+      <!-- Chat Messages Container -->
+      <div id="chatBox" class="chat-container">
+        <!-- Messages rendered dynamically -->
+      </div>
+
+      <!-- User Input Control Bar -->
+      <div class="controls-bar">
+        <button id="micBtn" class="mic-btn" onclick="toggleMic()" title="Hold or click to speak">🎤</button>
+        <input type="text" id="answerInput" placeholder="Type your answer or speak using the microphone..." onkeypress="handleKeyPress(event)">
+        <button class="btn-primary" onclick="sendAnswer()">Send Answer &rarr;</button>
+      </div>
+    </section>
+
+    <!-- Tab 3: Recruiter Report Panel -->
+    <section id="reportPanel" class="panel">
+      <h2 style="margin-bottom: 20px; font-weight: 600;">Technical Candidate Evaluation Report</h2>
+      
+      <div class="report-grid">
+        <div class="score-box">
+          <p style="font-size: 0.9rem; color: var(--text-secondary); text-transform: uppercase;">Overall Technical Score</p>
+          <div id="overallScoreNum" class="score-num">8.5</div>
+          <div id="recommendationBadge" style="margin-top: 10px; font-weight: 700; color: var(--accent-green);">PROCEED TO NEXT ROUND</div>
+        </div>
+
+        <div style="background: rgba(15, 23, 42, 0.6); padding: 24px; border-radius: var(--radius-md); border: 1px solid var(--card-border);">
+          <h3 style="margin-bottom: 12px; color: var(--accent-cyan);">Key Technical Strengths</h3>
+          <div id="strengthsContainer" style="margin-bottom: 20px;"></div>
+
+          <h3 style="margin-bottom: 12px; color: var(--accent-pink);">Areas for Improvement</h3>
+          <div id="weaknessesContainer"></div>
+        </div>
+      </div>
+
+      <div style="margin-top: 30px; text-align: right;">
+        <button class="btn-secondary" onclick="window.print()">🖨️ Print / Save Report PDF</button>
+      </div>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
