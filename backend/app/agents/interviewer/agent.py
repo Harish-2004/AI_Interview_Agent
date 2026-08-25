@@ -2,6 +2,7 @@ import json
 
 from pydantic import BaseModel
 
+from app.guardrails import validate_interview_question_guardrail
 from app.llm.gateway import llm_gateway
 from app.mcp.client import MCPClient
 
@@ -42,10 +43,14 @@ async def run_interviewer(state: dict, mcp: MCPClient) -> dict:
     )
     try:
         parsed = InterviewerOutput.model_validate_json(raw)
-        question = parsed.question
+        raw_question = parsed.question
     except Exception:
-        question = f"Tell me about your experience with {topic}."
+        raw_question = f"Tell me about your experience with {topic}."
 
-    state["current_question"] = question
+    # APPLY INTERVIEW QUESTION GUARDRAIL
+    guardrail_res = validate_interview_question_guardrail(raw_question, topic=topic)
+    validated_question = guardrail_res["validated_question"]
+
+    state["current_question"] = validated_question
     state["question_count"] = state.get("question_count", 0) + 1
     return state

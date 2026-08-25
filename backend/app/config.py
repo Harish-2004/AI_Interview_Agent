@@ -25,6 +25,11 @@ class Settings(BaseSettings):
     use_real_llm: bool = False
     log_level: str = "INFO"
 
+    # Ragas & LlamaIndex settings
+    ragas_faithfulness_threshold: float = 0.75
+    ragas_eval_enabled: bool = True
+    llama_index_top_k: int = 3
+
     # LangSmith tracing settings
     langchain_tracing_v2: bool = False
     langchain_api_key: str = ""
