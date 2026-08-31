@@ -230,7 +230,7 @@ def validate_evaluation_faithfulness_guardrail(
     feedback: str,
     threshold: float = 0.75,
 ) -> dict[str, Any]:
-    """Guardrail 5: Uses Ragas metrics to verify that evaluation feedback is faithful to resume context."""
+    """Guardrail 5: Uses Ragas metrics to verify evaluation feedback against retrieved context (JD + Resume)."""
     res = ragas_evaluator.evaluate_sample(
         question=question,
         contexts=contexts,
@@ -247,3 +247,75 @@ def validate_evaluation_faithfulness_guardrail(
         "threshold": threshold,
         "feedback": res.feedback,
     }
+
+
+async def resolve_dual_evaluation_context(
+    mcp: Any,
+    candidate_id: int,
+    job_id: int,
+    topic: str = "general",
+) -> dict[str, Any]:
+    """
+    Constructs evaluation context following the Dual-Context Fallback Hierarchy:
+    1. Primary: Dual-Context (Both Job Description + Candidate Resume RAG).
+    2. Fallback 1: JD-Only Context (if Candidate Resume context is unindexed or missing).
+    3. Fallback 2: Generic JD Anchor (if specific JD record is missing).
+    """
+    jd_chunks: list[str] = []
+    resume_chunks: list[str] = []
+
+    # --- Step 1: Fetch Job Description Context (The Primary Anchor) ---
+    try:
+        if mcp and hasattr(mcp, "search_jd_rag"):
+            jd_rag_res = await mcp.search_jd_rag(job_id=job_id, query=topic, top_k=2)
+            jd_chunks = jd_rag_res.get("context_chunks", [])
+        
+        if not jd_chunks and mcp and hasattr(mcp, "get_job_description"):
+            jd_info = await mcp.get_job_description(job_id=job_id)
+            if jd_info and isinstance(jd_info, dict) and "description" in jd_info:
+                desc = jd_info.get("description", "")
+                title = jd_info.get("title", f"Job #{job_id}")
+                skills = jd_info.get("required_skills", "")
+                jd_chunks = [f"[Job Description] Title: {title}. Required Skills: {skills}. Details: {desc}"]
+    except Exception:
+        jd_chunks = []
+
+    # --- Step 2: Fetch Candidate Resume Context (The Evidence Anchor) ---
+    try:
+        if mcp and hasattr(mcp, "search_resume_rag"):
+            resume_rag_res = await mcp.search_resume_rag(candidate_id=candidate_id, query=topic, top_k=3)
+            resume_chunks = resume_rag_res.get("context_chunks", [])
+    except Exception:
+        resume_chunks = []
+
+    # --- Step 3: Apply Strategy Hierarchy ---
+    # Strategy 1: Primary Dual-Context (Both JD + Resume context available)
+    if jd_chunks and resume_chunks:
+        return {
+            "contexts": jd_chunks + resume_chunks,
+            "strategy": "dual_context",
+            "jd_chunks_count": len(jd_chunks),
+            "resume_chunks_count": len(resume_chunks),
+        }
+
+    # Strategy 2: Fallback 1 -> JD-Primary Context (Resume unavailable)
+    if jd_chunks:
+        return {
+            "contexts": jd_chunks,
+            "strategy": "jd_fallback",
+            "jd_chunks_count": len(jd_chunks),
+            "resume_chunks_count": 0,
+        }
+
+    # Strategy 3: Fallback 2 -> Generic JD Requirement Anchor
+    generic_jd = [
+        f"[Generic Job Description Anchor] Target expectations for '{topic}': "
+        f"Verify core technical skills, problem-solving ability, communication, and job role alignment."
+    ]
+    return {
+        "contexts": generic_jd + resume_chunks if resume_chunks else generic_jd,
+        "strategy": "generic_jd_fallback",
+        "jd_chunks_count": 1,
+        "resume_chunks_count": len(resume_chunks),
+    }
+

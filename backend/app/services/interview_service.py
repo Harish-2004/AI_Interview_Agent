@@ -86,7 +86,7 @@ class InterviewService:
         # Offload Evaluation & Ragas Faithfulness Guardrail to Asynchronous Background Task
         if current_q and sanitized_answer:
             task = asyncio.create_task(
-                self._async_evaluate_and_persist(
+                self._async_eval_and_save(
                     interview_id=interview.id,
                     candidate_id=interview.candidate_id,
                     job_id=interview.job_id,
@@ -120,7 +120,7 @@ class InterviewService:
         await self.db.refresh(interview)
         return interview
 
-    async def _async_evaluate_and_persist(
+    async def _async_eval_and_save(
         self,
         interview_id: int,
         candidate_id: int,
@@ -129,7 +129,7 @@ class InterviewService:
         topic: str,
         answer: str,
     ) -> None:
-        """Asynchronously runs Evaluator Agent, Ragas Faithfulness Guardrail, and saves Evaluation record to DB."""
+        """Asynchronously runs Evaluator Agent, Dual-Context Ragas Guardrail, and saves Evaluation record to DB."""
         try:
             async with async_session_factory() as session:
                 mcp = get_mcp_client(session)
@@ -144,14 +144,19 @@ class InterviewService:
                 }
                 updated = await run_evaluator(eval_state, mcp)
 
-                # Fetch LlamaIndex RAG resume context for Ragas quality verification
-                rag_res = await mcp.search_resume_rag(candidate_id=candidate_id, query=topic, top_k=3)
-                contexts = rag_res.get("context_chunks", [])
+                # Resolve Context using Dual-Context (JD + Resume) with Fallback Hierarchy
+                context_res = await resolve_dual_evaluation_context(
+                    mcp=mcp,
+                    candidate_id=candidate_id,
+                    job_id=job_id,
+                    topic=topic,
+                )
+                contexts = context_res.get("contexts", [])
 
                 last_eval = updated.get("evaluations", [{}])[-1] if updated.get("evaluations") else {}
                 feedback = last_eval.get("feedback", "")
 
-                # Apply Ragas Faithfulness Guardrail
+                # Apply Ragas Faithfulness Guardrail against Dual Context
                 eval_result = validate_evaluation_faithfulness_guardrail(
                     question=question,
                     contexts=contexts,
@@ -160,7 +165,7 @@ class InterviewService:
                 )
 
                 if not eval_result.get("passed", True) and updated.get("evaluations"):
-                    updated["evaluations"][-1]["feedback"] += " [Reflected: Feedback validated against resume RAG context]."
+                    updated["evaluations"][-1]["feedback"] += f" [Reflected: Feedback validated against {context_res.get('strategy')} context]."
 
                 # Save evaluation to DB
                 svc = InterviewService(session)

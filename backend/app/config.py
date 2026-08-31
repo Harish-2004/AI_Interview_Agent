@@ -16,10 +16,10 @@ class Settings(BaseSettings):
     google_api_key: str = ""
     gemini_api_key: str = ""
 
-    planner_model: str = "gemini/gemini-2.5-flash"
-    interviewer_model: str = "gemini/gemini-2.5-flash"
-    evaluator_model: str = "gemini/gemini-2.5-flash"
-    report_model: str = "gemini/gemini-2.5-flash"
+    planner_model: str = "gemini/gemini-3.6-flash"
+    interviewer_model: str = "gemini/gemini-3.6-flash"
+    evaluator_model: str = "gemini/gemini-3.6-flash"
+    report_model: str = "gemini/gemini-3.6-flash"
 
     max_questions: int = 10
     use_real_llm: bool = False

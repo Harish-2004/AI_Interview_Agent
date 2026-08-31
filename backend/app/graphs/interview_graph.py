@@ -10,6 +10,7 @@ from app.agents.interviewer.agent import run_interviewer
 from app.agents.planner.agent import run_planner
 from app.agents.report.agent import run_report
 from app.guardrails import (
+    resolve_dual_evaluation_context,
     validate_candidate_answer_guardrail,
     validate_evaluation_faithfulness_guardrail,
 )
@@ -35,7 +36,7 @@ class InterviewState(TypedDict, total=False):
     messages: Annotated[list, add_messages]
 
 
-def build_interview_graph(mcp: MCPClient):
+def build_interview_graph(mcp: MCPClient) -> StateGraph:
     graph = StateGraph(InterviewState)
 
     async def planner_node(state: InterviewState) -> InterviewState:
@@ -57,23 +58,31 @@ def build_interview_graph(mcp: MCPClient):
     async def evaluator_node(state: InterviewState) -> InterviewState:
         updated = await run_evaluator(dict(state), mcp)
         
-        # Fetch LlamaIndex RAG resume context for Ragas quality verification
+        # Resolve Context using Dual-Context (JD + Resume) with Fallback Hierarchy
         candidate_id = state.get("candidate_id", 0)
+        job_id = state.get("job_id", 0)
         topic = state.get("current_topic", "general")
-        rag_res = await mcp.search_resume_rag(candidate_id=candidate_id, query=topic, top_k=3)
-        contexts = rag_res.get("context_chunks", [])
+
+        context_resolution = await resolve_dual_evaluation_context(
+            mcp=mcp,
+            candidate_id=candidate_id,
+            job_id=job_id,
+            topic=topic,
+        )
+        contexts = context_resolution.get("contexts", [])
         
         last_eval = updated.get("evaluations", [{}])[-1] if updated.get("evaluations") else {}
         feedback = last_eval.get("feedback", "")
         question = state.get("current_question", "")
 
-        # APPLY RAG EVALUATION FAITHFULNESS GUARDRAIL
+        # APPLY RAG EVALUATION FAITHFULNESS GUARDRAIL AGAINST DUAL CONTEXT
         eval_result = validate_evaluation_faithfulness_guardrail(
             question=question,
             contexts=contexts,
             feedback=feedback,
             threshold=0.75,
         )
+        eval_result["strategy"] = context_resolution.get("strategy")
         updated["ragas_eval"] = eval_result
         return updated
 

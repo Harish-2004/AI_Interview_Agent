@@ -1,6 +1,6 @@
-"""Unit tests for modular application guardrails."""
-
+import pytest
 from app.guardrails import (
+    resolve_dual_evaluation_context,
     sanitize_db_result_guardrail,
     validate_candidate_answer_guardrail,
     validate_evaluation_faithfulness_guardrail,
@@ -83,3 +83,48 @@ def test_validate_evaluation_faithfulness_guardrail():
     eval_res = validate_evaluation_faithfulness_guardrail(question, contexts, feedback)
     assert eval_res["passed"] is True
     assert eval_res["faithfulness_score"] > 0.5
+
+
+@pytest.mark.asyncio
+async def test_resolve_dual_evaluation_context_hierarchy():
+    # Mock MCP Client with both JD RAG and Resume RAG available
+    class MockDualMCP:
+        async def search_jd_rag(self, job_id, query, top_k=2):
+            return {"context_chunks": ["JD Chunk: Senior Python Dev with FastAPI & Postgres."]}
+
+        async def search_resume_rag(self, candidate_id, query, top_k=3):
+            return {"context_chunks": ["Resume Chunk: 4 yrs experience with FastAPI microservices."]}
+
+    mock_dual = MockDualMCP()
+    res_dual = await resolve_dual_evaluation_context(mock_dual, candidate_id=1, job_id=10, topic="FastAPI")
+    assert res_dual["strategy"] == "dual_context"
+    assert res_dual["jd_chunks_count"] == 1
+    assert res_dual["resume_chunks_count"] == 1
+    assert len(res_dual["contexts"]) == 2
+
+    # Mock MCP Client with Resume RAG empty -> Fallback 1 to JD
+    class MockJdOnlyMCP:
+        async def search_jd_rag(self, job_id, query, top_k=2):
+            return {"context_chunks": ["JD Chunk: Required Python experience."]}
+
+        async def search_resume_rag(self, candidate_id, query, top_k=3):
+            return {"context_chunks": []}
+
+    mock_jd = MockJdOnlyMCP()
+    res_jd = await resolve_dual_evaluation_context(mock_jd, candidate_id=1, job_id=10, topic="Python")
+    assert res_jd["strategy"] == "jd_fallback"
+    assert len(res_jd["contexts"]) == 1
+
+    # Mock MCP Client with empty JD and empty Resume -> Fallback 2 to Generic JD Anchor
+    class MockEmptyMCP:
+        async def search_jd_rag(self, job_id, query, top_k=2):
+            return {"context_chunks": []}
+
+        async def search_resume_rag(self, candidate_id, query, top_k=3):
+            return {"context_chunks": []}
+
+    mock_empty = MockEmptyMCP()
+    res_generic = await resolve_dual_evaluation_context(mock_empty, candidate_id=1, job_id=10, topic="Docker")
+    assert res_generic["strategy"] == "generic_jd_fallback"
+    assert "Generic Job Description Anchor" in res_generic["contexts"][0]
+
