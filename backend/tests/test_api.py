@@ -76,6 +76,7 @@ async def test_interview_completes_and_report(client):
         f"/interviews/{interview_id}/messages",
         json={"content": "I have extensive FastAPI experience."},
     )
+    assert msg_resp.status_code == 200
     interview = msg_resp.json()
 
     if interview["status"] != "completed":

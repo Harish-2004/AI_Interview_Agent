@@ -47,8 +47,11 @@ async def run_interviewer(state: dict, mcp: MCPClient) -> dict:
     except Exception:
         raw_question = f"Tell me about your experience with {topic}."
 
-    # APPLY INTERVIEW QUESTION GUARDRAIL
-    guardrail_res = validate_interview_question_guardrail(raw_question, topic=topic)
+    # APPLY INTERVIEW QUESTION GUARDRAIL & DEDUPLICATION
+    prev_questions = prev.get("questions", [])
+    guardrail_res = validate_interview_question_guardrail(
+        raw_question, topic=topic, previous_questions=prev_questions
+    )
     validated_question = guardrail_res["validated_question"]
 
     state["current_question"] = validated_question

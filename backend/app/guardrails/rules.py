@@ -125,8 +125,12 @@ def classify_text_safety_guardrail(text: str) -> dict[str, Any]:
 # 3. INTERVIEW QUESTION GUARDRAILS
 # =====================================================================
 
-def validate_interview_question_guardrail(question: str, topic: str = "general") -> dict[str, Any]:
-    """Guardrail 3: Validates generated interview questions using hybrid safety classification."""
+def validate_interview_question_guardrail(
+    question: str,
+    topic: str = "general",
+    previous_questions: list[str] | None = None,
+) -> dict[str, Any]:
+    """Guardrail 3: Validates generated interview questions using hybrid safety classification & deduplication."""
     clean_q = question.strip()
 
     if len(clean_q) < 10:
@@ -136,6 +140,20 @@ def validate_interview_question_guardrail(question: str, topic: str = "general")
             "reason": "Question too short or empty.",
             "validated_question": fallback,
         }
+
+    # Deduplication check against previous questions
+    if previous_questions:
+        clean_q_lower = re.sub(r"\W+", " ", clean_q.lower()).strip()
+        for prev in previous_questions:
+            prev_lower = re.sub(r"\W+", " ", prev.lower()).strip()
+            if clean_q_lower == prev_lower or (len(prev_lower) > 15 and prev_lower in clean_q_lower):
+                fallback = f"Building on your background, what is a specific problem you solved using {topic} or a related framework?"
+                return {
+                    "passed": False,
+                    "reason": f"Duplicate question detected matching previous question.",
+                    "category": "duplicate",
+                    "validated_question": fallback,
+                }
 
     # Apply hybrid safety classification
     safety_check = classify_text_safety_guardrail(clean_q)
