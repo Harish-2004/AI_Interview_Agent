@@ -10,7 +10,11 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    database_url: str = "sqlite+aiosqlite:///./interview_agent.db"
+    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/interview_agent"
+    mongodb_url: str = "mongodb://localhost:27017"
+    mongodb_database: str = "interview_agent"
+    active_db_mcp_type: str = "dual"  # Options: 'postgres', 'mongodb', 'dual'
+
     openai_api_key: str = ""
     anthropic_api_key: str = ""
     google_api_key: str = ""

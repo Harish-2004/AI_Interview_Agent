@@ -1,16 +1,31 @@
+from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.mcp.db_client import get_db_mcp_client
 from app.mcp.handlers import JDHandlers, MemoryHandlers, ResumeHandlers
 from app.services.rag_service import rag_service
 
 
 class MCPClient:
-    """In-process MCP client wrapping domain tool handlers and LlamaIndex RAG tools."""
+    """In-process MCP client wrapping domain tool handlers, LlamaIndex RAG tools, and Multi-DB MCP operations (Postgres & Mongo)."""
 
     def __init__(self, db: AsyncSession):
         self._resume = ResumeHandlers(db)
         self._jd = JDHandlers(db)
         self._memory = MemoryHandlers(db)
+        self._db_mcp = get_db_mcp_client(db)
+
+    async def list_database_structures(self) -> dict[str, Any]:
+        """Discover database structures across PostgreSQL tables and MongoDB collections."""
+        return await self._db_mcp.list_database_structures()
+
+    async def describe_database_schema(self, name: str, engine: str = "auto") -> dict[str, Any]:
+        """Describe table schema or collection metadata."""
+        return await self._db_mcp.describe_database_schema(name, engine)
+
+    async def execute_safe_query(self, query_or_filter: str, target: str | None = None, engine: str = "auto") -> dict[str, Any]:
+        """Execute guardrail-validated query on Postgres or Mongo."""
+        return await self._db_mcp.execute_safe_query(query_or_filter, target, engine)
 
     async def get_resume(self, candidate_id: int) -> dict:
         data = await self._resume.get_resume(candidate_id)
@@ -26,7 +41,6 @@ class MCPClient:
 
     async def search_resume_rag(self, candidate_id: int, query: str, top_k: int = 3) -> dict:
         """Search candidate resume using LlamaIndex RAG retrieval."""
-        # Ensure resume is indexed
         data = await self._resume.get_resume(candidate_id)
         if "resume_text" in data:
             rag_service.index_resume(candidate_id, data["resume_text"])

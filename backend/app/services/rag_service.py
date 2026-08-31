@@ -2,7 +2,6 @@
 
 import os
 import re
-from typing import Any
 from llama_index.core import Document, Settings, VectorStoreIndex
 from llama_index.core.embeddings import MockEmbedding
 from llama_index.core.node_parser import SimpleNodeParser

@@ -12,6 +12,7 @@ from app.mcp.client import get_mcp_client
 from app.agents.evaluator.agent import run_evaluator
 from app.agents.report.agent import run_report
 from app.guardrails import (
+    resolve_dual_evaluation_context,
     validate_candidate_answer_guardrail,
     validate_evaluation_faithfulness_guardrail,
 )

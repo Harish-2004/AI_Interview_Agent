@@ -150,7 +150,7 @@ def validate_interview_question_guardrail(
                 fallback = f"Building on your background, what is a specific problem you solved using {topic} or a related framework?"
                 return {
                     "passed": False,
-                    "reason": f"Duplicate question detected matching previous question.",
+                    "reason": "Duplicate question detected matching previous question.",
                     "category": "duplicate",
                     "validated_question": fallback,
                 }

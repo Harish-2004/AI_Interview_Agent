@@ -1,7 +1,6 @@
 """Ragas Evaluation Suite for measuring Faithfulness, Answer Relevance, Context Precision, and Context Recall."""
 
 import re
-from typing import Any
 from pydantic import BaseModel
 
 from app.config import settings

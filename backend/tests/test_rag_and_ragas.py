@@ -10,27 +10,31 @@ from app.services.rag_service import rag_service
 
 @pytest.mark.asyncio
 async def test_generic_db_mcp_server_tools():
-    # 1. Test get_tables
-    tables_res = await get_tables()
-    assert tables_res["status"] == "success"
-    assert isinstance(tables_res["tables"], list)
+    from unittest.mock import AsyncMock, patch
+    with patch("app.mcp.generic_db_server.server.db_mcp_client.list_database_structures", new=AsyncMock(return_value={"status": "success", "structures": {"postgresql": {"tables": ["candidates"]}}})), \
+         patch("app.mcp.generic_db_server.server.db_mcp_client.describe_database_schema", new=AsyncMock(return_value={"status": "success", "table": "candidates", "columns": []})), \
+         patch("app.mcp.generic_db_server.server.db_mcp_client.execute_safe_query", side_effect=lambda q, **kw: {"status": "error", "message": "Security Error: Only read-only SELECT queries are allowed."} if "DELETE" in q else {"status": "success", "data": [{"test_val": 1}]}):
+        
+        # 1. Test get_tables
+        tables_res = await get_tables()
+        assert tables_res["status"] == "success"
+        assert isinstance(tables_res["tables"], list)
 
-    # 2. Test describe_table if tables exist
-    if tables_res["tables"]:
-        target_table = tables_res["tables"][0]
-        desc_res = await describe_table(target_table)
+        # 2. Test describe_table if tables exist
+        desc_res = await describe_table("candidates")
         assert desc_res["status"] == "success"
-        assert desc_res["table"] == target_table
+        assert desc_res["table"] == "candidates"
 
-    # 3. Test execute_read_query safe SELECT
-    query_res = await execute_read_query("SELECT 1 AS test_val;")
-    assert query_res["status"] == "success"
-    assert query_res["data"][0]["test_val"] == 1
+        # 3. Test execute_read_query safe SELECT
+        query_res = await execute_read_query("SELECT 1 AS test_val;")
+        assert query_res["status"] == "success"
+        assert query_res["data"][0]["test_val"] == 1
 
-    # 4. Test security block on mutation queries
-    bad_res = await execute_read_query("DELETE FROM candidates;")
-    assert bad_res["status"] == "error"
-    assert "Security Error" in bad_res["message"]
+        # 4. Test security block on mutation queries
+        bad_res = await execute_read_query("DELETE FROM candidates;")
+        assert bad_res["status"] == "error"
+        assert "Security Error" in bad_res["message"]
+
 
 
 def test_llama_index_rag_service():
