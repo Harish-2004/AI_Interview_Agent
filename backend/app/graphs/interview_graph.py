@@ -1,4 +1,7 @@
+import logging
 from typing import Annotated, TypedDict
+
+logger = logging.getLogger(__name__)
 
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
@@ -40,12 +43,15 @@ def build_interview_graph(mcp: MCPClient) -> StateGraph:
     graph = StateGraph(InterviewState)
 
     async def planner_node(state: InterviewState) -> InterviewState:
+        logger.info(f"🟢 [LANGGRAPH FLOW] Entering Node: PLANNER (interview_id={state.get('interview_id')})")
         return await run_planner(dict(state), mcp)
 
     async def interviewer_node(state: InterviewState) -> InterviewState:
+        logger.info(f"🎤 [LANGGRAPH FLOW] Entering Node: INTERVIEWER (topic={state.get('current_topic')})")
         return await run_interviewer(dict(state), mcp)
 
     async def wait_for_answer_node(state: InterviewState) -> InterviewState:
+        logger.info(f"⏸️ [LANGGRAPH FLOW] Entering Node: WAIT_FOR_ANSWER (question={state.get('current_question')[:40]}...)")
         raw_answer = interrupt({"question": state.get("current_question", "")})
         
         # APPLY CANDIDATE ANSWER GUARDRAIL (Prompt injection & empty answer check)
@@ -56,6 +62,7 @@ def build_interview_graph(mcp: MCPClient) -> StateGraph:
         return updated
 
     async def evaluator_node(state: InterviewState) -> InterviewState:
+        logger.info(f"⚖️ [LANGGRAPH FLOW] Entering Node: EVALUATOR (candidate_id={state.get('candidate_id')})")
         updated = await run_evaluator(dict(state), mcp)
         
         # Resolve Context using Dual-Context (JD + Resume) with Fallback Hierarchy
@@ -88,6 +95,7 @@ def build_interview_graph(mcp: MCPClient) -> StateGraph:
 
     async def reflection_node(state: InterviewState) -> InterviewState:
         """Reflection node triggered when Ragas faithfulness guardrail fails."""
+        logger.info(f"🔄 [LANGGRAPH FLOW] Entering Node: REFLECTION (count={state.get('reflection_count', 0) + 1})")
         updated = dict(state)
         ref_count = updated.get("reflection_count", 0) + 1
         updated["reflection_count"] = ref_count
@@ -112,15 +120,19 @@ def build_interview_graph(mcp: MCPClient) -> StateGraph:
         return updated
 
     async def report_node(state: InterviewState) -> InterviewState:
+        logger.info(f"📊 [LANGGRAPH FLOW] Entering Node: REPORT (interview_id={state.get('interview_id')})")
         return await run_report(dict(state), mcp)
 
     def route_after_evaluator(state: InterviewState) -> str:
         ragas_info = state.get("ragas_eval", {})
         # If Ragas guardrail failed and we haven't reflected too many times, route to reflection
         if not ragas_info.get("passed", True) and state.get("reflection_count", 0) < 2:
+            logger.info("🔀 [LANGGRAPH ROUTER] Routing -> REFLECTION node")
             return "reflection"
         if state.get("should_continue"):
+            logger.info("🔀 [LANGGRAPH ROUTER] Routing -> PLANNER node")
             return "planner"
+        logger.info("🔀 [LANGGRAPH ROUTER] Routing -> REPORT node")
         return "report"
 
     graph.add_node("planner", planner_node)

@@ -15,8 +15,16 @@ class InterviewerOutput(BaseModel):
 INTERVIEWER_SYSTEM = """You are a technical interviewer.
 Ask clear, focused questions about the given skill/topic.
 Use resume and job context when relevant.
-Respond with JSON only: {"question": "<question>", "isFollowUp": true|false}
+Respond with JSON only: {{"question": "<question>", "isFollowUp": true|false}}
 Keep questions concise and professional."""
+
+
+from langchain_core.prompts import ChatPromptTemplate
+
+interviewer_prompt_template = ChatPromptTemplate.from_messages([
+    ("system", INTERVIEWER_SYSTEM),
+    ("user", "{context_json}"),
+])
 
 
 async def run_interviewer(state: dict, mcp: MCPClient) -> dict:
@@ -33,9 +41,11 @@ async def run_interviewer(state: dict, mcp: MCPClient) -> dict:
         "last_answer": state.get("last_answer"),
     }
 
+    # Format messages using LangChain ChatPromptTemplate
+    prompt_value = interviewer_prompt_template.format_messages(context_json=json.dumps(context))
     messages = [
-        {"role": "system", "content": INTERVIEWER_SYSTEM},
-        {"role": "user", "content": json.dumps(context)},
+        {"role": "user" if msg.type in ("human", "user") else msg.type, "content": msg.content}
+        for msg in prompt_value
     ]
 
     raw = await llm_gateway.generate(

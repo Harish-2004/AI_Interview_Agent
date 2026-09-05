@@ -2,9 +2,10 @@
 
 import os
 import re
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from llama_index.core import Document, Settings, VectorStoreIndex
 from llama_index.core.embeddings import MockEmbedding
-from llama_index.core.node_parser import SimpleNodeParser
+from llama_index.core.node_parser import LangchainNodeParser
 
 from app.config import settings
 
@@ -15,10 +16,12 @@ if not os.environ.get("OPENAI_API_KEY") and not settings.openai_api_key:
 
 
 class LlamaIndexRAGService:
-    """RAG Service managing document indexing, node parsing, and retrieval via LlamaIndex."""
+    """RAG Service managing document indexing, node parsing, and retrieval via LangChain Text Splitter & LlamaIndex."""
 
     def __init__(self):
-        self._node_parser = SimpleNodeParser.from_defaults(chunk_size=256, chunk_overlap=32)
+        # Use LangChain RecursiveCharacterTextSplitter for intelligent paragraph/sentence splitting
+        lc_splitter = RecursiveCharacterTextSplitter(chunk_size=256, chunk_overlap=32)
+        self._node_parser = LangchainNodeParser(lc_splitter)
         self._resume_indices: dict[int, VectorStoreIndex] = {}
         self._jd_indices: dict[int, VectorStoreIndex] = {}
         self._resume_texts: dict[int, str] = {}

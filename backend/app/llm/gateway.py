@@ -121,8 +121,8 @@ class LLMGateway:
         kwargs: dict[str, Any] = {
             "model": model,
             "messages": messages,
-            "num_retries": 3,
-            "fallbacks": ["gemini/gemini-2.5-flash", "gemini/gemini-1.5-flash"],
+            "num_retries": 2,
+            "fallbacks": ["ollama/gemma:2b", "ollama/llama3.2", "ollama/qwen2.5-coder:7b", "gemini/gemini-2.5-flash"],
         }
         if response_format:
             kwargs["response_format"] = response_format

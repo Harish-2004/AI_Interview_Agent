@@ -16,8 +16,16 @@ class ReportOutput(BaseModel):
 REPORT_SYSTEM = """You are a recruiter report generator.
 Summarize the interview evaluations into a hiring recommendation.
 Respond with JSON only:
-{"overallScore": N, "strengths": [...], "weaknesses": [...], "recommendation": "..."}
+{{"overallScore": N, "strengths": [...], "weaknesses": [...], "recommendation": "..."}}
 overallScore is the average score rounded. recommendation is one short sentence."""
+
+
+from langchain_core.prompts import ChatPromptTemplate
+
+report_prompt_template = ChatPromptTemplate.from_messages([
+    ("system", REPORT_SYSTEM),
+    ("user", "{report_payload}"),
+])
 
 
 async def run_report(state: dict, mcp: MCPClient) -> dict:
@@ -32,9 +40,11 @@ async def run_report(state: dict, mcp: MCPClient) -> dict:
     else:
         avg = 0
 
+    payload = json.dumps({"evaluations": evaluations, "averageScore": avg})
+    prompt_value = report_prompt_template.format_messages(report_payload=payload)
     messages = [
-        {"role": "system", "content": REPORT_SYSTEM},
-        {"role": "user", "content": json.dumps({"evaluations": evaluations, "averageScore": avg})},
+        {"role": "user" if msg.type in ("human", "user") else msg.type, "content": msg.content}
+        for msg in prompt_value
     ]
 
     raw = await llm_gateway.generate(messages, "report", interview_id=state.get("interview_id"))

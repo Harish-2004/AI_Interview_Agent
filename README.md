@@ -44,6 +44,10 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for agent I/O schemas, graph fl
 7. Loop until all skills are covered or max questions reached.
 8. **Report** agent returns recruiter summary JSON.
 
+## Developer Onboarding & Quickstart
+
+For a full step-by-step onboarding walkthrough, request lifecycle diagrams, and component breakdown, see **[docs/ONBOARDING.md](docs/ONBOARDING.md)**.
+
 ## Quick Start
 
 ### Prerequisites

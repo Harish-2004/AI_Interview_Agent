@@ -12,8 +12,16 @@ class PlannerOutput(BaseModel):
 
 PLANNER_SYSTEM = """You are a technical interview planner.
 Given covered and remaining skills, pick the next skill to assess.
-Respond with JSON only: {"nextTopic": "<skill>"}
+Respond with JSON only: {{"nextTopic": "<skill>"}}
 Pick from remaining_skills. If none remain, pick the most important uncovered topic."""
+
+
+from langchain_core.prompts import ChatPromptTemplate
+
+planner_prompt_template = ChatPromptTemplate.from_messages([
+    ("system", PLANNER_SYSTEM),
+    ("user", "{skills_payload}"),
+])
 
 
 async def run_planner(state: dict, mcp: MCPClient) -> dict:
@@ -26,12 +34,11 @@ async def run_planner(state: dict, mcp: MCPClient) -> dict:
             remaining = [s for s in jd_skills["required_skills"] if s not in covered]
             state["remaining_skills"] = remaining
 
+    payload = json.dumps({"coveredSkills": covered, "remainingSkills": remaining})
+    prompt_value = planner_prompt_template.format_messages(skills_payload=payload)
     messages = [
-        {"role": "system", "content": PLANNER_SYSTEM},
-        {
-            "role": "user",
-            "content": json.dumps({"coveredSkills": covered, "remainingSkills": remaining}),
-        },
+        {"role": "user" if msg.type in ("human", "user") else msg.type, "content": msg.content}
+        for msg in prompt_value
     ]
 
     if remaining:

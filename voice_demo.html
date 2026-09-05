@@ -2,43 +2,267 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>AI Interview Agent - Voice Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Voice Interview Agent - Interactive Demo</title>
   <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; background: #0f172a; color: #f8fafc; }
-    h1 { color: #38bdf8; text-align: center; font-size: 2rem; margin-bottom: 5px; }
-    .subtitle { text-align: center; color: #94a3b8; margin-bottom: 30px; }
-    .card { background: #1e293b; padding: 24px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #334155; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-    button { background: #0284c7; color: white; border: none; padding: 12px 24px; font-size: 16px; font-weight: 600; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
-    button:hover { background: #0369a1; }
-    button:disabled { background: #475569; cursor: not-allowed; opacity: 0.6; }
-    .mic-btn { background: #ef4444; }
-    .mic-btn:hover { background: #dc2626; }
-    .mic-listening { animation: pulse 1.5s infinite; background: #b91c1c; }
-    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-    .transcript { background: #0f172a; padding: 16px; border-radius: 8px; font-style: italic; min-height: 48px; margin-top: 12px; border: 1px solid #334155; color: #cbd5e1; }
-    .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.875rem; font-weight: 600; background: #334155; color: #38bdf8; }
-    .question-box { font-size: 1.15rem; line-height: 1.6; color: #f1f5f9; background: #0f172a; padding: 16px; border-radius: 8px; border-left: 4px solid #38bdf8; }
+    :root {
+      --bg-dark: #0b0f19;
+      --card-bg: #151d30;
+      --accent-cyan: #06b6d4;
+      --accent-blue: #3b82f6;
+      --accent-green: #10b981;
+      --accent-red: #ef4444;
+      --text-main: #f8fafc;
+      --text-sub: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 30px 20px;
+      background: var(--bg-dark);
+      color: var(--text-main);
+    }
+
+    .header { text-align: center; margin-bottom: 25px; }
+    .header h1 {
+      font-size: 2.2rem;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 6px;
+    }
+    .subtitle { color: var(--text-sub); font-size: 1rem; }
+
+    /* Profile Cards */
+    .profile-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 600px) { .profile-grid { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 14px;
+      border: 1px solid #1e293b;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+      position: relative;
+    }
+
+    .profile-card h4 { color: var(--accent-cyan); margin-bottom: 8px; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; }
+    .profile-card h3 { font-size: 1.15rem; color: #ffffff; margin-bottom: 4px; }
+    .profile-card p { font-size: 0.88rem; color: var(--text-sub); line-height: 1.4; }
+
+    /* Avatar & Audio Visualizer */
+    .avatar-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 15px;
+      background: #0f172a;
+      border-radius: 12px;
+      margin-bottom: 15px;
+      border: 1px solid #1e293b;
+    }
+
+    .avatar-circle {
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      border: 3px solid var(--accent-cyan);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+
+    .avatar-circle.speaking {
+      border-color: var(--accent-green);
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+      animation: pulseAvatar 1.2s infinite ease-in-out;
+    }
+
+    @keyframes pulseAvatar {
+      0% { transform: scale(1); box-shadow: 0 0 10px rgba(16, 185, 129, 0.4); }
+      50% { transform: scale(1.06); box-shadow: 0 0 25px rgba(16, 185, 129, 0.7); }
+      100% { transform: scale(1); box-shadow: 0 0 10px rgba(16, 185, 129, 0.4); }
+    }
+
+    /* Sound Waveform Visualizer */
+    .waveform {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      height: 24px;
+      margin-top: 10px;
+    }
+    .wave-bar {
+      width: 4px;
+      height: 6px;
+      background: #334155;
+      border-radius: 2px;
+      transition: height 0.15s ease;
+    }
+    .speaking .wave-bar {
+      background: var(--accent-green);
+      animation: wave 1s infinite ease-in-out;
+    }
+    .speaking .wave-bar:nth-child(1) { animation-delay: 0.1s; }
+    .speaking .wave-bar:nth-child(2) { animation-delay: 0.3s; }
+    .speaking .wave-bar:nth-child(3) { animation-delay: 0.2s; }
+    .speaking .wave-bar:nth-child(4) { animation-delay: 0.4s; }
+    .speaking .wave-bar:nth-child(5) { animation-delay: 0.15s; }
+
+    @keyframes wave {
+      0%, 100% { height: 6px; }
+      50% { height: 22px; }
+    }
+
+    /* Status Badge & Controls */
+    .controls { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 20px; }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      background: #1e293b;
+      color: var(--accent-cyan);
+      border: 1px solid #334155;
+    }
+    .status-badge.listening { color: var(--accent-red); border-color: var(--accent-red); }
+    .status-badge.speaking { color: var(--accent-green); border-color: var(--accent-green); }
+
+    .btn {
+      background: var(--accent-blue);
+      color: white;
+      border: none;
+      padding: 12px 22px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn:hover { background: #2563eb; transform: translateY(-1px); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .btn-mic { background: var(--accent-red); }
+    .btn-mic:hover { background: #dc2626; }
+    .btn-mic.recording {
+      background: #b91c1c;
+      animation: pulseMic 1.2s infinite;
+    }
+
+    @keyframes pulseMic {
+      0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+      70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+
+    .question-box {
+      font-size: 1.1rem;
+      line-height: 1.6;
+      color: #f1f5f9;
+      background: #0f172a;
+      padding: 18px;
+      border-radius: 10px;
+      border-left: 4px solid var(--accent-cyan);
+      min-height: 70px;
+    }
+
+    .transcript-box {
+      background: #0f172a;
+      padding: 16px;
+      border-radius: 10px;
+      font-style: italic;
+      min-height: 55px;
+      margin-top: 12px;
+      border: 1px solid #334155;
+      color: #cbd5e1;
+    }
+
+    .prompt-hint {
+      margin-top: 8px;
+      font-size: 0.82rem;
+      color: var(--accent-green);
+      font-weight: 500;
+      display: none;
+    }
   </style>
 </head>
 <body>
 
-  <h1>🎙️ AI Voice Interview Agent</h1>
-  <p class="subtitle">Speech-to-Text (STT) & Text-to-Speech (TTS) Live Demo</p>
-
-  <div class="card">
-    <button id="startBtn" onclick="startInterview()">1. Start Mock Interview</button>
-    <span style="margin-left: 15px;">Status: <span id="status" class="status-badge">Ready</span></span>
+  <div class="header">
+    <h1>🎙️ AI Voice Technical Interview</h1>
+    <p class="subtitle">Real-time Speech Recognition & Natural Speech Synthesis</p>
   </div>
 
-  <div class="card">
-    <h3>🤖 AI Interviewer Question (TTS)</h3>
-    <div id="questionText" class="question-box">Click 'Start Mock Interview' to receive the first question...</div>
+  <!-- Candidate & Position Context -->
+  <div class="profile-grid">
+    <div class="card profile-card">
+      <h4>👤 Candidate Profile (Being Interviewed)</h4>
+      <h3>Alex Chen</h3>
+      <p>Senior Full-Stack Engineer (5+ Yrs Exp)<br>Skills: Python, FastAPI, Docker, PostgreSQL, React</p>
+    </div>
+    <div class="card profile-card">
+      <h4>💼 Target Position</h4>
+      <h3>Senior Backend Engineer</h3>
+      <p>Company: Tech Corp<br>Requirements: Python, Async APIs, System Design, SQL</p>
+    </div>
   </div>
 
+  <!-- Start Session Control -->
+  <div class="controls card" style="padding: 15px 20px; margin-bottom: 20px;">
+    <button id="startBtn" class="btn" onclick="startInterview()">▶️ Start Voice Interview Session</button>
+    <div>
+      <span style="font-size: 0.9rem; color: var(--text-sub);">Status: </span>
+      <span id="statusBadge" class="status-badge">Ready</span>
+    </div>
+  </div>
+
+  <!-- AI Interviewer Avatar & Question Box -->
   <div class="card">
-    <h3>🗣️ Candidate Spoken Answer (STT)</h3>
-    <button id="micBtn" class="mic-btn" onclick="toggleMicrophone()" disabled>🎤 Click & Speak Answer</button>
-    <div id="userSpeech" class="transcript">Your spoken answer will be transcribed here...</div>
+    <div class="avatar-wrapper" id="avatarWrapper">
+      <div class="avatar-circle" id="avatarCircle">🤖</div>
+      <div style="margin-top: 6px; font-weight: 600; font-size: 0.9rem;" id="avatarLabel">AI Technical Interviewer</div>
+      <div class="waveform" id="waveform">
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+      </div>
+    </div>
+
+    <h3>🤖 AI Question (Speech Synthesis)</h3>
+    <div id="questionText" class="question-box" style="margin-top: 10px;">Click 'Start Voice Interview Session' to begin the interview...</div>
+  </div>
+
+  <!-- Candidate Spoken Answer STT Box -->
+  <div class="card" style="margin-top: 20px;">
+    <h3>🗣️ Your Spoken Answer (Speech-to-Text)</h3>
+    
+    <div style="margin-top: 15px; margin-bottom: 10px;">
+      <button id="micBtn" class="btn btn-mic" onclick="toggleMicrophone()" disabled>🎤 Click & Speak Answer</button>
+      <div id="promptHint" class="prompt-hint">👉 AI finished asking question! Click the red button above to speak your answer.</div>
+    </div>
+
+    <div id="userSpeech" class="transcript-box">Click the microphone button and speak your answer...</div>
   </div>
 
   <script>
@@ -46,13 +270,28 @@
     let interviewId = null;
     let recognition = null;
     let isListening = false;
+    let preferredVoice = null;
 
-    // Initialize Browser Speech Recognition (Speech-to-Text)
+    // Load Best Natural Voice for Speech Synthesis (TTS)
+    function loadVoices() {
+      const voices = window.speechSynthesis.getVoices();
+      // Look for Google US English, Microsoft Natural, or Samantha
+      preferredVoice = voices.find(v => v.name.includes("Google US English") || v.name.includes("Natural") || v.name.includes("Samantha") || v.name.includes("Alex")) || voices[0];
+    }
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    loadVoices();
+
+    // Initialize Browser Speech Recognition (STT)
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
       recognition = new SpeechRecognition();
       recognition.continuous = false;
       recognition.interimResults = true;
+
+      recognition.onstart = () => {
+        isListening = true;
+        updateUIState("listening");
+      };
 
       recognition.onresult = (event) => {
         const transcript = Array.from(event.results).map(r => r[0].transcript).join('');
@@ -61,67 +300,80 @@
 
       recognition.onend = () => {
         isListening = false;
-        document.getElementById('micBtn').classList.remove('mic-listening');
-        document.getElementById('micBtn').innerText = '🎤 Click & Speak Answer';
+        updateUIState("stopped");
         const finalAnswer = document.getElementById('userSpeech').innerText.trim();
-        if (finalAnswer && !finalAnswer.includes("transcribed here")) {
+        if (finalAnswer && !finalAnswer.includes("Click the microphone")) {
           submitAnswer(finalAnswer);
         }
       };
+
+      recognition.onerror = (err) => {
+        isListening = false;
+        updateUIState("stopped");
+      };
     } else {
-      alert("Speech Recognition API is not supported in your browser. Please open in Google Chrome or MS Edge.");
+      alert("Speech Recognition API is not supported in your browser. Please open in Google Chrome or Microsoft Edge.");
     }
 
-    // Text-To-Speech (TTS) Browser Function
-    function speakText(text) {
+    // Speak AI Question with Avatar Animation
+    function speakText(text, callback) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
+      if (preferredVoice) utterance.voice = preferredVoice;
       utterance.rate = 1.0;
       utterance.pitch = 1.0;
+
+      utterance.onstart = () => {
+        updateUIState("speaking");
+      };
+
+      utterance.onend = () => {
+        updateUIState("ready_to_answer");
+        if (callback) callback();
+      };
+
       window.speechSynthesis.speak(utterance);
     }
 
-    // Start Interview Session with Seeded Mock Data (candidate_id: 1, job_id: 1)
+    // Start Session with Seeded Data (Candidate #1, Job #1)
     async function startInterview() {
-      document.getElementById('status').innerText = 'Initializing...';
+      document.getElementById('statusBadge').innerText = 'Initializing...';
       try {
         const res = await fetch(`${BASE_URL}/interviews`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ candidate_id: 1, job_id: 1 })
         });
-        if (!res.ok) throw new Error("Failed to start session. Ensure mock database is seeded!");
+        if (!res.ok) throw new Error("Failed to start session. Run 'uv run python scripts/seed_demo_data.py' in backend!");
         const data = await res.json();
         interviewId = data.id;
-        document.getElementById('status').innerText = `Active (ID #${interviewId})`;
+        
         document.getElementById('startBtn').disabled = true;
-        document.getElementById('micBtn').disabled = false;
-
         document.getElementById('questionText').innerText = data.current_question;
+        
+        // Speak initial AI question
         speakText(data.current_question);
       } catch (err) {
-        document.getElementById('status').innerText = 'Error! Ensure backend server is running.';
+        document.getElementById('statusBadge').innerText = 'Error!';
         alert(err.message);
       }
     }
 
-    // Toggle Speech-to-Text Recording
+    // Toggle Microphone Recording
     function toggleMicrophone() {
       if (!recognition) return;
       if (!isListening) {
+        window.speechSynthesis.cancel(); // Stop AI voice if still talking
         document.getElementById('userSpeech').innerText = '';
         recognition.start();
-        isListening = true;
-        document.getElementById('micBtn').classList.add('mic-listening');
-        document.getElementById('micBtn').innerText = '🎙️ Listening... Speak Now';
       } else {
         recognition.stop();
       }
     }
 
-    // Submit Transcribed Speech to Backend Agent API
+    // Submit Transcribed Speech to Backend API
     async function submitAnswer(answerText) {
-      document.getElementById('status').innerText = 'Agent thinking & evaluating...';
+      updateUIState("thinking");
       try {
         const res = await fetch(`${BASE_URL}/interviews/${interviewId}/messages`, {
           method: 'POST',
@@ -131,17 +383,69 @@
         const data = await res.json();
 
         if (data.status === 'completed') {
-          document.getElementById('status').innerText = 'Completed!';
-          document.getElementById('questionText').innerText = '🎉 Interview Complete! Generating final candidate report.';
+          updateUIState("completed");
+          document.getElementById('questionText').innerText = '🎉 Interview Complete! Final recruiter summary report generated.';
           speakText('Thank you! The interview session is now complete.');
-          document.getElementById('micBtn').disabled = true;
         } else {
-          document.getElementById('status').innerText = `Active (Q#${data.question_count})`;
           document.getElementById('questionText').innerText = data.current_question;
           speakText(data.current_question);
         }
       } catch (err) {
-        document.getElementById('status').innerText = 'Error submitting answer.';
+        document.getElementById('statusBadge').innerText = 'Error evaluating answer.';
+      }
+    }
+
+    // UI Visual State Helper
+    function updateUIState(state) {
+      const statusBadge = document.getElementById('statusBadge');
+      const micBtn = document.getElementById('micBtn');
+      const avatarCircle = document.getElementById('avatarCircle');
+      const waveform = document.getElementById('waveform');
+      const promptHint = document.getElementById('promptHint');
+
+      if (state === "speaking") {
+        statusBadge.className = "status-badge speaking";
+        statusBadge.innerText = "🤖 AI Talking...";
+        avatarCircle.classList.add("speaking");
+        waveform.classList.add("speaking");
+        micBtn.disabled = true;
+        promptHint.style.display = "none";
+      } 
+      else if (state === "ready_to_answer") {
+        statusBadge.className = "status-badge";
+        statusBadge.innerText = "🟢 Ready for Your Answer";
+        avatarCircle.classList.remove("speaking");
+        waveform.classList.remove("speaking");
+        micBtn.disabled = false;
+        micBtn.classList.remove("recording");
+        micBtn.innerText = "🎤 Click & Speak Answer";
+        promptHint.style.display = "block";
+      } 
+      else if (state === "listening") {
+        statusBadge.className = "status-badge listening";
+        statusBadge.innerText = "🔴 Microphone Active (Listening...)";
+        avatarCircle.classList.remove("speaking");
+        waveform.classList.remove("speaking");
+        micBtn.classList.add("recording");
+        micBtn.innerText = "🎙️ Listening... (Click to Finish)";
+        promptHint.style.display = "none";
+      } 
+      else if (state === "stopped") {
+        micBtn.classList.remove("recording");
+        micBtn.innerText = "🎤 Click & Speak Answer";
+      }
+      else if (state === "thinking") {
+        statusBadge.className = "status-badge";
+        statusBadge.innerText = "⏳ AI Evaluating Answer...";
+        micBtn.disabled = true;
+        promptHint.style.display = "none";
+      }
+      else if (state === "completed") {
+        statusBadge.className = "status-badge";
+        statusBadge.innerText = "🎉 Interview Finished";
+        micBtn.disabled = true;
+        avatarCircle.classList.remove("speaking");
+        waveform.classList.remove("speaking");
       }
     }
   </script>

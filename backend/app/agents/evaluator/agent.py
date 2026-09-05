@@ -18,8 +18,16 @@ class EvaluatorOutput(BaseModel):
 EVALUATOR_SYSTEM = """You are a technical interview evaluator.
 Score the candidate's answer from 1-10 for the given skill.
 Respond with JSON only:
-{"score": N, "skill": "...", "strengths": [...], "weaknesses": [...], "feedback": "..."}
+{{"score": N, "skill": "...", "strengths": [...], "weaknesses": [...], "feedback": "..."}}
 Be fair and specific."""
+
+
+from langchain_core.prompts import ChatPromptTemplate
+
+evaluator_prompt_template = ChatPromptTemplate.from_messages([
+    ("system", EVALUATOR_SYSTEM),
+    ("user", "{eval_payload}"),
+])
 
 
 async def run_evaluator(state: dict, mcp: MCPClient) -> dict:
@@ -27,12 +35,11 @@ async def run_evaluator(state: dict, mcp: MCPClient) -> dict:
     answer = state.get("last_answer", "")
     topic = state.get("current_topic", "")
 
+    payload = json.dumps({"skill": topic, "question": question, "answer": answer})
+    prompt_value = evaluator_prompt_template.format_messages(eval_payload=payload)
     messages = [
-        {"role": "system", "content": EVALUATOR_SYSTEM},
-        {
-            "role": "user",
-            "content": json.dumps({"skill": topic, "question": question, "answer": answer}),
-        },
+        {"role": "user" if msg.type in ("human", "user") else msg.type, "content": msg.content}
+        for msg in prompt_value
     ]
 
     raw = await llm_gateway.generate(

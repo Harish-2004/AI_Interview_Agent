@@ -1,0 +1,27 @@
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+	__start__([<p>__start__</p>]):::first
+	planner(planner)
+	interviewer(interviewer)
+	wait_for_answer(wait_for_answer)
+	evaluator(evaluator)
+	reflection(reflection)
+	report(report)
+	__end__([<p>__end__</p>]):::last
+	__start__ --> planner;
+	evaluator -.-> planner;
+	evaluator -.-> reflection;
+	evaluator -.-> report;
+	interviewer --> wait_for_answer;
+	planner --> interviewer;
+	reflection -.-> planner;
+	reflection -.-> report;
+	wait_for_answer --> evaluator;
+	report --> __end__;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc
